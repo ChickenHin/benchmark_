@@ -1,7 +1,7 @@
 name: bazel
 
 on:
-  push: {}
+  # push: {}
   pull_request: {}
 
 env:
