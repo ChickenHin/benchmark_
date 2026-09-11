@@ -20,10 +20,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04]
-        build_type: [Debug']
+        os: [ubuntu-24.04, ubuntu-22.04, ubuntu-24.04-arm, macos-latest]
+        build_type: ['Debug']
         compiler: ['clang++']
-        lib: ['shared']
+        lib: ['static']
 
     steps:
       - name: Install dependencies (macos)
@@ -52,112 +52,108 @@ jobs:
         working-directory: ${{ runner.workspace }}/_build
         run: ctest -C ${{ matrix.build_type }} -VV
 
-  # msvc:
-  #   name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.msvc }}
-  #   runs-on: ${{ matrix.os }}
-  #   defaults:
-  #       run:
-  #           shell: powershell
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       msvc:
-  #         - VS-18-2025
-  #         - VS-17-2022
-  #       build_type:
-  #         - Debug
-  #         - Release
-  #       lib:
-  #         - shared
-  #         - static
-  #       include:
-  #         - msvc: VS-18-2025
-  #           os: windows-2025
-  #           generator: 'Visual Studio 18 2026'
-  #         - msvc: VS-17-2022
-  #           os: windows-2022
-  #           generator: 'Visual Studio 17 2022'
+  msvc:
+    name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.msvc }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+        run:
+            shell: powershell
+    strategy:
+      fail-fast: false
+      matrix:
+        msvc:
+          - VS-18-2025
+          - VS-17-2022
+        build_type:
+          - Debug
+        lib:
+          - shared
+        include:
+          - msvc: VS-18-2025
+            os: windows-2025
+            generator: 'Visual Studio 18 2026'
+          - msvc: VS-17-2022
+            os: windows-2022
+            generator: 'Visual Studio 17 2022'
 
-  #   steps:
-  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-  #       with:
-  #         persist-credentials: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-  #     - uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # latest
+      - uses: lukka/get-cmake@fffaaafeea488556c2c12dad60690008bc1caacb # latest
 
-  #     - name: configure cmake
-  #       run: >
-  #         cmake -S . -B $env:RUNNER_WORKSPACE/_build/
-  #         -G "${{ matrix.generator }}"
-  #         -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
-  #         -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
-  #       env:
-  #         RUNNER_WORKSPACE: ${{ runner.workspace }}
+      - name: configure cmake
+        run: >
+          cmake -S . -B $env:RUNNER_WORKSPACE/_build/
+          -G "${{ matrix.generator }}"
+          -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+          -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
+        env:
+          RUNNER_WORKSPACE: ${{ runner.workspace }}
 
-  #     - name: build
-  #       run: cmake --build $env:RUNNER_WORKSPACE/_build/ --config ${{ matrix.build_type }}
-  #       env:
-  #         RUNNER_WORKSPACE: ${{ runner.workspace }}
+      - name: build
+        run: cmake --build $env:RUNNER_WORKSPACE/_build/ --config ${{ matrix.build_type }}
+        env:
+          RUNNER_WORKSPACE: ${{ runner.workspace }}
 
-  #     - name: test
-  #       run: ctest --test-dir $env:RUNNER_WORKSPACE/_build/ -C ${{ matrix.build_type }} -VV
-  #       env:
-  #         RUNNER_WORKSPACE: ${{ runner.workspace }}
+      - name: test
+        run: ctest --test-dir $env:RUNNER_WORKSPACE/_build/ -C ${{ matrix.build_type }} -VV
+        env:
+          RUNNER_WORKSPACE: ${{ runner.workspace }}
 
-  # msys2:
-  #   name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.msys2.msystem }}
-  #   runs-on: ${{ matrix.os }}
-  #   defaults:
-  #       run:
-  #           shell: msys2 {0}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ windows-latest ]
-  #       msys2:
-  #         - { msystem: MINGW64,    arch: x86_64,  family: GNU,  compiler: g++ }
-  #         - { msystem: CLANG64,    arch: x86_64,  family: LLVM, compiler: clang++ }
-  #         - { msystem: UCRT64,     arch: x86_64,  family: GNU,  compiler: g++ }
-  #       build_type:
-  #         - Debug
-  #         - Release
-  #       lib:
-  #         - shared
-  #         - static
+  msys2:
+    name: ${{ matrix.os }}.${{ matrix.build_type }}.${{ matrix.lib }}.${{ matrix.msys2.msystem }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+        run:
+            shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest ]
+        msys2:
+          - { msystem: MINGW64,    arch: x86_64,  family: GNU,  compiler: g++ }
+          - { msystem: CLANG64,    arch: x86_64,  family: LLVM, compiler: clang++ }
+          - { msystem: UCRT64,     arch: x86_64,  family: GNU,  compiler: g++ }
+        build_type:
+          - Debug
+        lib:
+          - static
 
-  #   steps:
-  #     - name: setup msys2
-  #       uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
-  #       with:
-  #         cache: false
-  #         msystem: ${{ matrix.msys2.msystem }}
-  #         update: true
-  #         install: >-
-  #           git
-  #           base-devel
-  #         pacboy: >-
-  #           gcc:p
-  #           clang:p
-  #           cmake:p
-  #           ninja:p
+    steps:
+      - name: setup msys2
+        uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
+        with:
+          cache: false
+          msystem: ${{ matrix.msys2.msystem }}
+          update: true
+          install: >-
+            git
+            base-devel
+          pacboy: >-
+            gcc:p
+            clang:p
+            cmake:p
+            ninja:p
 
-  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-  #       with:
-  #         persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-  #     # NOTE: we can't use cmake actions here as we need to do everything in msys2 shell.
-  #     - name: configure cmake
-  #       env:
-  #         CXX: ${{ matrix.msys2.compiler }}
-  #       run: >
-  #         cmake -S . -B _build/
-  #         -GNinja
-  #         -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
-  #         -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
+      # NOTE: we can't use cmake actions here as we need to do everything in msys2 shell.
+      - name: configure cmake
+        env:
+          CXX: ${{ matrix.msys2.compiler }}
+        run: >
+          cmake -S . -B _build/
+          -GNinja
+          -DBENCHMARK_DOWNLOAD_DEPENDENCIES=ON
+          -DBUILD_SHARED_LIBS=${{ matrix.lib == 'shared' }}
 
-  #     - name: build
-  #       run: cmake --build _build/ --config ${{ matrix.build_type }}
+      - name: build
+        run: cmake --build _build/ --config ${{ matrix.build_type }}
 
-  #     - name: test
-  #       working-directory: _build
-  #       run: ctest -C ${{ matrix.build_type }} -VV
+      - name: test
+        working-directory: _build
+        run: ctest -C ${{ matrix.build_type }} -VV
