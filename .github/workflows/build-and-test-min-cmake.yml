@@ -3,8 +3,7 @@ name: build-and-test-min-cmake
 on:
   # push:
   #   branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch: 
 
 permissions:
   contents: read
@@ -51,4 +50,6 @@ jobs:
       - name: build
         shell: bash
         working-directory: ${{ runner.workspace }}/_build
-        run: cmake --build .
+        run: |
+          cmake --build .
+          ctest -V
